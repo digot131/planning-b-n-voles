@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Planning Bénévoles</title>
+
+<style>
+body { font-family: Arial; background:#f4f6f8; padding:20px;}
+.card { background:white; padding:15px; margin:10px 0; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,.1);}
+.btn { background:#2e7d32; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer;}
+.btn:hover{background:#1b5e20;}
+.badge { background:#ddd; padding:4px 8px; border-radius:6px; font-size:12px;}
+.full{background:#ffcdd2;}
+</style>
+</head>
+
+<body>
+
+<h2>Planning des bénévoles</h2>
+<div id="planning"></div>
+
+<script>
+const SHEET_JSON = "https://opensheet.elk.sh/VOTRE_ID_SHEET/planning";
+const API = "COLLER_URL_APPS_SCRIPT_ICI";
+
+async function loadPlanning(){
+  const res = await fetch(SHEET_JSON);
+  const data = await res.json();
+  const container = document.getElementById("planning");
+  container.innerHTML="";
+
+  data.forEach(row=>{
+    const full = parseInt(row.inscrits) >= parseInt(row.besoin);
+
+    const div = document.createElement("div");
+    div.className="card "+(full?"full":"");
+
+    div.innerHTML = `
+      <b>${row.jour}</b> ${row.debut}-${row.fin}<br>
+      <span class="badge">${row.categorie}</span><br>
+      ${row.inscrits}/${row.besoin} bénévoles<br><br>
+      ${full?"Complet":`<button class="btn" onclick='demande(${JSON.stringify(row)})'>Demander</button>`}
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function demande(slot){
+  const nom = prompt("Votre nom ?");
+  if(!nom) return;
+
+  const tel = prompt("Votre téléphone ?");
+  if(!tel) return;
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({...slot,nom,tel})
+  });
+
+  alert("Demande envoyée !");
+}
+
+loadPlanning();
+</script>
+
+</body>
+</html>
