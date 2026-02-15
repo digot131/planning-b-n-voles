@@ -6,69 +6,26 @@
 <title>Planning bénévoles</title>
 
 <style>
-body{
-  font-family: system-ui;
-  background:#f0f2f5;
-  margin:0;
-}
+body{font-family:system-ui;background:#f3f4f6;margin:0}
+header{background:#111827;color:white;padding:15px;font-size:20px;font-weight:bold}
 
-header{
-  background:#111827;
-  color:white;
-  padding:15px;
-  font-size:20px;
-  font-weight:bold;
-}
+.day{margin:20px}
+table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+th,td{padding:10px;text-align:left;font-size:14px}
+th{background:#111827;color:white}
+tr:nth-child(even){background:#f9fafb}
 
-.day{
-  margin:15px;
-}
+.cat{font-weight:bold;padding:3px 6px;border-radius:6px;color:white;font-size:12px}
+.bar{background:#f97316}
+.restauration{background:#16a34a}
+.caisse{background:#2563eb}
+.montage{background:#7c3aed}
+.demontage{background:#6b7280}
+.blindtest{background:#ec4899}
 
-.day h2{
-  margin:10px 0;
-}
-
-.slot{
-  background:white;
-  border-radius:12px;
-  padding:12px;
-  margin:10px 0;
-  box-shadow:0 2px 8px rgba(0,0,0,.08);
-}
-
-.cat{
-  padding:4px 8px;
-  border-radius:8px;
-  font-size:12px;
-  font-weight:bold;
-  color:white;
-}
-
-.bar{background:#f97316;}
-.restauration{background:#16a34a;}
-.caisse{background:#2563eb;}
-.montage{background:#7c3aed;}
-.demontage{background:#6b7280;}
-.blindtest{background:#ec4899;}
-
-button{
-  margin-top:8px;
-  padding:8px 12px;
-  border:none;
-  border-radius:8px;
-  background:#111827;
-  color:white;
-  cursor:pointer;
-}
-
-.full{
-  opacity:.5;
-}
-
-.count{
-  font-size:13px;
-  color:#555;
-}
+button{padding:6px 10px;border:none;border-radius:6px;background:#111827;color:white;cursor:pointer}
+.full{color:#999;font-style:italic}
+.names{font-size:13px;color:#333}
 </style>
 </head>
 
@@ -78,67 +35,66 @@ button{
 <div id="planning"></div>
 
 <script>
-const SHEET_JSON = "https://opensheet.elk.sh/1YKohHlGSwkaSHxwk6Yt3uhRNzIrQUU7hEsfOygncnE4/planning";
-const API = "COLLE_TON_URL_SCRIPT";
+const SHEET_JSON="https://opensheet.elk.sh/TON_ID/planning";
+const API="COLLE_TON_URL_SCRIPT";
 
-const colorClass = cat=>{
-  cat=cat.toLowerCase();
-  if(cat.includes("bar")) return "bar";
-  if(cat.includes("rest")) return "restauration";
-  if(cat.includes("caisse")) return "caisse";
-  if(cat.includes("montage")) return "montage";
-  if(cat.includes("démont")||cat.includes("demont")) return "demontage";
-  if(cat.includes("blind")) return "blindtest";
-  return "";
+const colorClass=cat=>{
+cat=cat.toLowerCase();
+if(cat.includes("bar"))return"bar";
+if(cat.includes("rest"))return"restauration";
+if(cat.includes("caisse"))return"caisse";
+if(cat.includes("montage"))return"montage";
+if(cat.includes("démont")||cat.includes("demont"))return"demontage";
+if(cat.includes("blind"))return"blindtest";
+return"";
 }
 
 async function loadPlanning(){
-  const res = await fetch(SHEET_JSON);
-  const data = await res.json();
-  const container=document.getElementById("planning");
-  container.innerHTML="";
+const res=await fetch(SHEET_JSON);
+const data=await res.json();
+const container=document.getElementById("planning");
+container.innerHTML="";
 
-  const days=[...new Set(data.map(r=>r.jour))];
+const days=[...new Set(data.map(r=>r.jour))];
 
-  days.forEach(day=>{
-    const section=document.createElement("div");
-    section.className="day";
-    section.innerHTML=`<h2>${day}</h2>`;
+days.forEach(day=>{
+let html=`<div class="day"><h2>${day}</h2><table>
+<tr>
+<th>Horaire</th>
+<th>Catégorie</th>
+<th>Inscrits</th>
+<th>Bénévoles</th>
+<th></th>
+</tr>`;
 
-    data.filter(r=>r.jour===day).forEach(r=>{
-      const inscrits=parseInt(r.inscrits||0);
-      const besoin=parseInt(r.besoin||0);
-      const full=inscrits>=besoin;
+data.filter(r=>r.jour===day).forEach(r=>{
+const inscrits=parseInt(r.inscrits||0);
+const besoin=parseInt(r.besoin||0);
+const full=inscrits>=besoin;
 
-      const div=document.createElement("div");
-      div.className="slot "+(full?"full":"");
+html+=`
+<tr>
+<td><b>${r.debut}-${r.fin}</b></td>
+<td><span class="cat ${colorClass(r.categorie)}">${r.categorie}</span></td>
+<td>${inscrits}/${besoin}</td>
+<td class="names">${r.noms||""}</td>
+<td>${full?'<span class="full">Complet</span>':`<button onclick='demande(${JSON.stringify(r)})'>Demander</button>`}</td>
+</tr>`;
+});
 
-      div.innerHTML=`
-        <b>${r.debut} - ${r.fin}</b><br>
-        <span class="cat ${colorClass(r.categorie)}">${r.categorie}</span>
-        <div class="count">${inscrits}/${besoin} bénévoles</div>
-        ${full?"<i>Complet</i>":`<button onclick='demande(${JSON.stringify(r)})'>Demander</button>`}
-      `;
-
-      section.appendChild(div);
-    });
-
-    container.appendChild(section);
-  });
+html+=`</table></div>`;
+container.innerHTML+=html;
+});
 }
 
 function demande(slot){
-  const nom=prompt("Ton nom ?");
-  if(!nom) return;
-  const tel=prompt("Ton téléphone ?");
-  if(!tel) return;
+const nom=prompt("Ton nom ?");
+if(!nom)return;
+const tel=prompt("Ton téléphone ?");
+if(!tel)return;
 
-  fetch(API,{
-    method:"POST",
-    body:JSON.stringify({...slot,nom,tel})
-  });
-
-  alert("Merci ! On te confirme rapidement 👍");
+fetch(API,{method:"POST",body:JSON.stringify({...slot,nom,tel})});
+alert("Merci ! On te confirme rapidement 👍");
 }
 
 loadPlanning();
@@ -146,5 +102,6 @@ loadPlanning();
 
 </body>
 </html>
+
 
 
